@@ -1,0 +1,101 @@
+<!DOCTYPE html><html lang="tr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Bahis">
+<title>Bahis İstatistik</title>
+<style>
+:root{--bg:#eef1ec;--c:#fff;--t:#14231a;--m:#66736a;--a:#1f7a4d;--w:#2e9e6a;--d:#d6a02e;--l:#c8473a;--ln:#d5dbd2}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1a14;--c:#17251d;--t:#e8efe9;--m:#8da093;--a:#4cc38a;--ln:#2a3a30}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--t);font:15px/1.4 "Avenir Next",system-ui,sans-serif;padding:calc(env(safe-area-inset-top) + 12px) 14px 96px;font-variant-numeric:tabular-nums}
+h2{font:700 17px Georgia,serif;margin:20px 0 8px}
+.c{background:var(--c);border:1px solid var(--ln);border-radius:14px;padding:12px;margin:8px 0}
+select,input,button{font:inherit;width:100%;padding:11px;border-radius:9px;border:1px solid var(--ln);background:var(--c);color:var(--t);margin:4px 0}
+button{background:var(--a);color:#fff;border:0;font-weight:600}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;gap:6px;background:var(--c);border-top:1px solid var(--ln);padding:8px 10px calc(env(safe-area-inset-bottom) + 8px)}
+nav button{margin:0;background:none;color:var(--m)}nav button.on{color:var(--a);box-shadow:inset 0 -3px var(--a);border-radius:0}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}.m{color:var(--m);font-size:13px}
+.bar{height:7px;background:var(--ln);border-radius:4px;overflow:hidden;margin:3px 0 8px}.bar i{display:block;height:100%;background:var(--a)}
+.ch{display:inline-block;padding:2px 8px;border-radius:5px;margin:2px;font-size:13px;color:#fff}.W{background:var(--w)}.D{background:var(--d)}.L{background:var(--l)}
+.p{display:inline-block;padding:7px 10px;border:1px solid var(--ln);border-radius:20px;margin:3px;font-size:13px}.p.on{background:var(--a);color:#fff;border-color:var(--a)}
+table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:6px 3px;text-align:right;border-bottom:1px solid var(--ln)}td:first-child,th:first-child{text-align:left}
+</style></head><body>
+<div id="v" class="m">Veriler yükleniyor...</div>
+<div id="app" hidden><section id="s0"></section><section id="s1" hidden></section><section id="s2" hidden></section></div>
+<nav><button class="on" onclick="sek(0)">Fikstür</button><button onclick="sek(1)">Analiz</button><button onclick="sek(2)">Bahislerim</button></nav>
+<script>
+const URL_='https://script.google.com/macros/s/AKfycbwxDWAawfeo3xXDVYs6CBSgrkM8_63xo_E7tDuubeV10E-L4sAt1Q20m1t3GTY1g3Y/exec';
+let M=[],F=[],B=[],T={},A={list:[]};
+const $=i=>document.getElementById(i),sm=a=>a.reduce((x,y)=>x+y,0),pc=x=>(x*100).toFixed(0)+'%';
+const ort=a=>{a=a.filter(x=>x!=null);return a.length?sm(a)/a.length:0};
+const norm=s=>String(s).replace(/ı/g,'i').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9 ]/g,'').replace(/\b(fc|cf|sk|afc|fk)\b/g,'').trim();
+const esle=ad=>{const n=norm(ad),k=Object.keys(T);return k.find(t=>norm(t)==n)||k.find(t=>{const u=norm(t);return u.includes(n)||n.includes(u)})||null};
+const mapB=r=>({id:r[0],lig:r[1],ev:r[2],dep:r[3],t:r[4],bahis:r[5],oran:+r[6],mk:+r[7]||1});
+const KEYS=['MS 1','MS 0','MS 2','1X','X2','12','Alt 1.5','Üst 1.5','Alt 2.5','Üst 2.5','Alt 3.5','Üst 3.5','KG Var','KG Yok'];
+function sek(i){[0,1,2].forEach(j=>{$('s'+j).hidden=j!=i;document.querySelectorAll('nav button')[j].className=j==i?'on':''});if(i==2)bahisGoster()}
+async function yukle(){try{
+ const d=await(await fetch(URL_)).json();if(d.hata)throw d.hata;
+ M=d.m.sort((a,b)=>a[2]<b[2]?-1:1);F=d.f;B=d.b.map(mapB);
+ M.filter(x=>x[0]>='2526').forEach(x=>{T[x[3]]=x[1];T[x[4]]=x[1]});
+ $('v').hidden=true;$('app').hidden=false;fikGoster();analizForm();bahisGoster()
+}catch(e){$('v').textContent='Veri alınamadı: '+e}}
+function fikGoster(){
+ const b=new Date();b.setHours(0,0,0,0);const e=new Date(+b+8*864e5),g={};A.list=[];
+ F.forEach(r=>{const d=new Date(r[1]+'T'+(r[2]||'12:00:00')+'Z');if(d<b||d>e)return;(g[r[0]]=g[r[0]]||[]).push({d,ev:r[3],dep:r[4],lig:r[0]})});
+ let h='<h2>Önümüzdeki 7 gün</h2><div class="m">Fikstür ücretsiz kaynaktan geliyor ve eksik olabilir. Maç yoksa Analiz sekmesinden takımları seç.</div>';
+ const ks=Object.keys(g);if(!ks.length)h+='<div class="c m">Fikstür bulunamadı.</div>';
+ ks.forEach(l=>{h+='<h2>'+l+'</h2>';g[l].sort((a,b)=>a.d-b.d).forEach(m=>{const n=A.list.push(m)-1;
+  h+=`<div class="c row" onclick="fikSec(${n})"><span>${m.ev} - ${m.dep}</span><span class="m">${m.d.toLocaleString('tr-TR',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</span></div>`})});
+ $('s0').innerHTML=h}
+function fikSec(n){const m=A.list[n],ev=esle(m.ev),dep=esle(m.dep);
+ if(!ev||!dep){alert('Takım eşleşmedi: '+m.ev+' / '+m.dep+'. Analiz sekmesinden elle seç.');return}
+ A.sel=m.d.toISOString().slice(0,10);sek(1);$('L').value=m.lig;takimDoldur();$('E').value=ev;$('D').value=dep;analiz()}
+function analizForm(){
+ const ligs=[...new Set(Object.values(T))].sort();
+ $('s1').innerHTML=`<h2>Maç analizi</h2><div class="c"><select id="L" onchange="takimDoldur()">${ligs.map(l=>'<option>'+l+'</option>').join('')}</select><select id="E"></select><select id="D"></select><button onclick="A.sel=null;analiz()">Analiz et</button></div><div id="R"></div>`;takimDoldur()}
+function takimDoldur(){const l=$('L').value,ts=Object.keys(T).filter(t=>T[t]==l).sort();
+ ['E','D'].forEach((i,k)=>{$(i).innerHTML=ts.map(t=>'<option>'+t+'</option>').join('');$(i).selectedIndex=Math.min(k,ts.length-1)})}
+const poi=(l,k)=>{let p=Math.exp(-l);for(let i=1;i<=k;i++)p*=l/i;return p};
+function son(t,n){return M.filter(x=>x[3]==t||x[4]==t).slice(-n).map(x=>{const e=x[3]==t,v=(a,b)=>{const r=e?a:b;return r===''?null:+r};
+ return{gf:+(e?x[5]:x[6]),ga:+(e?x[6]:x[5]),s:v(x[7],x[8]),st:v(x[9],x[10])}})}
+function sezon(t,s){const L=M.filter(x=>x[0]==s&&(x[3]==t||x[4]==t));if(!L.length)return'';let w=0,d=0,l=0,gf=0,ga=0;
+ L.forEach(x=>{const e=x[3]==t,a=+(e?x[5]:x[6]),b=+(e?x[6]:x[5]);gf+=a;ga+=b;a>b?w++:a==b?d++:l++});
+ return`<div class="m">20${s.slice(0,2)}-${s.slice(2)}: ${L.length} maç, ${w}G ${d}B ${l}M, gol ${gf}-${ga}</div>`}
+function takimKart(t){const s=son(t,5);
+ return`<div class="c"><b>${t}</b> <span class="m">son 5 maç</span><div>${s.map(x=>`<span class="ch ${x.gf>x.ga?'W':x.gf==x.ga?'D':'L'}">${x.gf}-${x.ga}</span>`).join('')}</div>
+ <div class="m">Ortalama atılan ${ort(s.map(x=>x.gf)).toFixed(1)}, yenilen ${ort(s.map(x=>x.ga)).toFixed(1)}, şut ${ort(s.map(x=>x.s)).toFixed(1)} (isabetli ${ort(s.map(x=>x.st)).toFixed(1)})</div>${sezon(t,'2627')}${sezon(t,'2526')}</div>`}
+function analiz(){
+ const lig=$('L').value,ev=$('E').value,dep=$('D').value;if(ev==dep){alert('İki farklı takım seç');return}
+ const L=M.filter(x=>x[1]==lig&&x[0]>='2526'),h=ort(L.map(x=>+x[5])),a=ort(L.map(x=>+x[6])),g=(h+a)/2;
+ const q=t=>{const s=son(t,15),n=s.length+5;return{att:(sm(s.map(x=>x.gf))+5*g)/n/g,def:(sm(s.map(x=>x.ga))+5*g)/n/g}};
+ const E=q(ev),D=q(dep),lh=h*E.att*D.def,la=a*D.att*E.def,P={},sk=[];KEYS.forEach(k=>P[k]=0);
+ for(let i=0;i<10;i++)for(let j=0;j<10;j++){const p=poi(lh,i)*poi(la,j),t=i+j;sk.push([i+'-'+j,p]);
+  P[i>j?'MS 1':i==j?'MS 0':'MS 2']+=p;[1.5,2.5,3.5].forEach(c=>P[(t<c?'Alt ':'Üst ')+c]+=p);P[i&&j?'KG Var':'KG Yok']+=p}
+ P['1X']=P['MS 1']+P['MS 0'];P['X2']=P['MS 0']+P['MS 2'];P['12']=P['MS 1']+P['MS 2'];sk.sort((x,y)=>y[1]-x[1]);
+ const br=(n,p)=>`<div class="row"><span>${n}</span><b>${pc(p)}</b></div><div class="bar"><i style="width:${p*100}%"></i></div>`;
+ A.cur={lig,ev,dep,P};
+ $('R').innerHTML=`<div class="c"><b>${ev} - ${dep}</b><div class="m">Beklenen gol ${lh.toFixed(2)} - ${la.toFixed(2)}</div></div>
+ <div class="c">${br('Ev sahibi kazanır',P['MS 1'])}${br('Beraberlik',P['MS 0'])}${br('Deplasman kazanır',P['MS 2'])}</div>
+ <div class="c">${br('2.5 üst',P['Üst 2.5'])}${br('1.5 üst',P['Üst 1.5'])}${br('3.5 üst',P['Üst 3.5'])}${br('Karşılıklı gol var',P['KG Var'])}</div>
+ <div class="c m">En olası skorlar: ${sk.slice(0,5).map(x=>x[0]+' ('+pc(x[1])+')').join(', ')}</div>${takimKart(ev)}${takimKart(dep)}
+ <h2>Bahis ekle</h2><div class="c">${KEYS.map(k=>`<span class="p" onclick="secB('${k}',this)">${k} ${pc(P[k])}</span>`).join('')}
+ <div id="bf" hidden><input id="O" type="number" step="0.01" placeholder="Oran" oninput="kont()"><input id="Mk" type="number" value="1" placeholder="Miktar (birim)"><input id="Dt" type="date" value="${A.sel||new Date().toISOString().slice(0,10)}"><div id="kn" class="m"></div><button onclick="kaydet()">Bahsi kaydet</button></div></div>
+ <div class="m">Model basit bir Poisson tahminidir, sakatlık ve kadro bilgisi içermez.</div>`;A.sel=null;window.scrollTo(0,0)}
+function secB(k,el){A.cur.bahis=k;document.querySelectorAll('.p').forEach(x=>x.className='p');el.className='p on';$('bf').hidden=false;kont()}
+function kont(){const o=+$('O').value,p=A.cur.P[A.cur.bahis];$('kn').textContent=o>1?`Model ${pc(p)}, oranın ima ettiği ihtimal ${pc(1/o)}. ${p*o>1?'Model lehine görünüyor.':'Model bu oranı yüksek bulmuyor.'}`:''}
+async function post(o){const d=await(await fetch(URL_,{method:'POST',body:JSON.stringify(o)})).json();if(d.hata)throw d.hata;B=d.bahisler.map(mapB)}
+async function kaydet(){const o=+$('O').value;if(!(o>1)){alert('Oranı yaz');return}const c=A.cur;
+ try{await post({a:'ekle',lig:c.lig,ev:c.ev,dep:c.dep,tarih:$('Dt').value,bahis:c.bahis,oran:o,miktar:+$('Mk').value||1});alert('Bahis kaydedildi');sek(2)}catch(e){alert('Kaydedilemedi: '+e)}}
+async function sil(id){if(confirm('Bu bahis silinsin mi?')){try{await post({a:'sil',id});bahisGoster()}catch(e){alert(e)}}}
+const grp=b=>/^MS/.test(b)?'Maç sonucu':/^(1X|X2|12)$/.test(b)?'Çifte şans':/^(Alt|Üst)/.test(b)?'Alt/Üst':'KG';
+const ok=(b,h,a)=>{const t=h+a;return({'MS 1':h>a,'MS 0':h==a,'MS 2':h<a,'1X':h>=a,'X2':h<=a,'12':h!=a,'Alt 1.5':t<1.5,'Üst 1.5':t>1.5,'Alt 2.5':t<2.5,'Üst 2.5':t>2.5,'Alt 3.5':t<3.5,'Üst 3.5':t>3.5,'KG Var':h>0&&a>0,'KG Yok':!(h>0&&a>0)})[b]};
+const gun=(s,n)=>new Date(+new Date(s)+n*864e5).toISOString().slice(0,10);
+function coz(b){const m=M.find(x=>x[3]==b.ev&&x[4]==b.dep&&x[2]>=gun(b.t,-1)&&x[2]<=gun(b.t,4));return m?ok(b.bahis,+m[5],+m[6]):null}
+function bahisGoster(){const S={};const R=B.map(b=>({b,r:coz(b)}));
+ R.forEach(({b,r})=>{if(r===null)return;['Toplam',b.lig+': '+grp(b.bahis)].forEach(k=>{const o=S[k]=S[k]||{n:0,w:0,p:0,s:0};o.n++;o.w+=r;o.s+=b.mk;o.p+=r?b.mk*(b.oran-1):-b.mk})});
+ const ks=Object.keys(S).sort((x,y)=>x=='Toplam'?-1:y=='Toplam'?1:x<y?-1:1);
+ let h='<h2>Bahis istatistiklerim</h2>';
+ h+=ks.length?`<div class="c"><table><tr><th>Grup</th><th>Bahis</th><th>İsabet</th><th>Kâr</th><th>ROI</th></tr>${ks.map(k=>{const o=S[k];return`<tr><td>${k}</td><td>${o.n}</td><td>${pc(o.w/o.n)}</td><td>${o.p.toFixed(1)}</td><td>${pc(o.p/o.s)}</td></tr>`}).join('')}</table></div><div class="m">Kâr birim cinsindendir. Sonuçlar maç verisi gelince kendiliğinden hesaplanır.</div>`:'<div class="c m">Henüz sonuçlanan bahis yok. Analiz sekmesinden bahis ekle.</div>';
+ h+='<h2>Bahis listesi</h2>'+R.slice().reverse().map(({b,r})=>`<div class="c row"><div>${b.ev} - ${b.dep}<div class="m">${b.t}, ${b.bahis}, oran ${b.oran}, ${b.mk} birim</div></div><div style="text-align:right"><span class="ch ${r===null?'D':r?'W':'L'}">${r===null?'Bekliyor':r?'Kazandı':'Kaybetti'}</span><div class="m" onclick="sil('${b.id}')">Sil</div></div></div>`).join('');
+ $('s2').innerHTML=h}
+yukle();
+</script></body></html>
